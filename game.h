@@ -17,6 +17,7 @@ class Game
     void update(float deltaTime);
     void draw();
     void tick(float deltaTime);
+    vector<const Tank*>& merge_sort_tanks_health(vector<const Tank*>& tanks_vector);
     void insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end);
     void draw_health_bars(const std::vector<const Tank*>& sorted_tanks, const int team);
     void measure_performance();
