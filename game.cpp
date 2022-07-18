@@ -41,6 +41,10 @@ const static vec2 rocket_size(6, 6);
 const static float tank_radius = 3.f;
 const static float rocket_radius = 5.f;
 
+Game::~Game() {
+
+}
+
 // -----------------------------------------------------------
 // Initialize the simulation state
 // This function does not count for the performance multiplier
@@ -51,6 +55,9 @@ void Game::init()
     frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
 
     tanks.reserve(num_tanks_blue + num_tanks_red);
+
+    // Init the Grid
+    m_grid = std::make_unique<Grid>(screen->get_width(), screen->get_height(), CELL_SIZE);
 
     uint max_rows = 24;
 
@@ -67,12 +74,18 @@ void Game::init()
     {
         vec2 position{ start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
+    
+        // Add Tank to Grid
+        m_grid->addTank(&tanks.back());
     }
     //Spawn red tanks
     for (int i = 0; i < num_tanks_red; i++)
     {
         vec2 position{ start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
+    
+        // Add Tank to Grid
+        m_grid->addTank(&tanks.back());
     }
 
     particle_beams.push_back(Particle_beam(vec2(590, 327), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
@@ -176,24 +189,38 @@ void Game::update(float deltaTime)
     }
 
     //Update tanks
-    for (auto& tank : tanks)
+    for (size_t i = 0; i < tanks.size(); i++)
     {
-        if (tank.active == false)
+        if (tanks[i].active == false)
         {
             break;
         }
 
         //Move tanks according to speed and nudges (see above) also reload
-        tank.tick(background_terrain);
+        tanks[i].tick(background_terrain);
+
+        // Check to see if the Tank moved
+        Cell* newCell = m_grid->getCell(tanks[i].position);
+        if (newCell != tanks[i].ownerCell)
+        {
+            if (tanks[i].cellVectorIndex == -1) {
+                m_grid->addTank(&tanks[i], newCell);
+                return;
+            }
+
+            m_grid->removeTankFromCell(&tanks[i]);
+            m_grid->addTank(&tanks[i], newCell);
+        }
 
         //Shoot at closest target if reloaded
-        if (tank.rocket_reloaded())
+        if (tanks[i].rocket_reloaded())
         {
-            Tank& target = find_closest_enemy(tank);
+            Tank& target = find_closest_enemy(tanks[i]);
 
-            rockets.push_back(Rocket(tank.position, (target.get_position() - tank.position).normalized() * 3, rocket_radius, tank.allignment, ((tank.allignment == RED) ? &rocket_red : &rocket_blue)));
-
-            tank.reload_rocket();
+            // Spawn Rocket
+            rockets.push_back(Rocket(tanks[i].position, (target.get_position() - tanks[i].position).normalized() * 3, rocket_radius, tanks[i].allignment, ((tanks[i].allignment == RED) ? &rocket_red : &rocket_blue)));
+           
+            tanks[i].reload_rocket();
         }
     }
 
@@ -267,8 +294,9 @@ void Game::update(float deltaTime)
     }   
 
     //Update rockets
-    for (Rocket& rocket : rockets)
+    for (size_t i = 0; i < rockets.size(); i++)
     {
+        Rocket& rocket = rockets[i];
         rocket.tick();
         int tankIndex = 0;
 
@@ -317,7 +345,12 @@ void Game::update(float deltaTime)
         }
     }
 
-
+    ////Remove exploded rockets rom Cells
+    //for (size_t i = 0; i < rockets.size(); i++) {
+    //    if (!rockets[i].active) {
+    //        m_grid->removeTankFromCell(&tanks[i]);
+    //    }
+    //}
 
     //Remove exploded rockets with remove erase idiom
     rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) { return !rocket.active; }), rockets.end());

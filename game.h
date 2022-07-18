@@ -1,5 +1,7 @@
 #pragma once
 
+#include "grid.h";
+
 namespace Tmpl8
 {
 //forward declarations
@@ -8,9 +10,12 @@ class Rocket;
 class Smoke;
 class Particle_beam;
 
+const int CELL_SIZE = 128;
+
 class Game
 {
   public:
+      ~Game();
     void set_target(Surface* surface) { screen = surface; }
     void init();
     void shutdown();
@@ -18,7 +23,7 @@ class Game
     void draw();
     void tick(float deltaTime);
     vector<const Tank*>& merge_sort_tanks_health(vector<const Tank*>& tanks_vector);
-    void insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end);
+    //void insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end);
     void draw_health_bars(const std::vector<const Tank*>& sorted_tanks, const int team);
     void measure_performance();
 
@@ -45,13 +50,15 @@ class Game
     }
 
   private:
-    Surface* screen;
+    Surface* screen;  
 
     vector<Tank> tanks;
     vector<Rocket> rockets;
     vector<Smoke> smokes;
     vector<Explosion> explosions;
-    vector<Particle_beam> particle_beams;
+    vector<Particle_beam> particle_beams;  
+
+    std::unique_ptr<Grid> m_grid;
 
     Terrain background_terrain;
     std::vector<vec2> forcefield_hull;
@@ -63,6 +70,8 @@ class Game
 
     //Checks if a point lies on the left of an arbitrary angled line
     bool left_of_line(vec2 line_start, vec2 line_end, vec2 point);
+
+    void updateCollision(Grid* grid);
 };
 
 }; // namespace Tmpl8

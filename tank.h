@@ -3,6 +3,7 @@
 namespace Tmpl8
 {
     class Terrain; //forward declare
+    struct Cell;
 
 enum allignments
 {
@@ -58,6 +59,8 @@ class Tank
     Sprite* tank_sprite;
     Sprite* smoke_sprite;
 
+    Cell* ownerCell = nullptr;
+    int cellVectorIndex = -1;
 };
 
 } // namespace Tmpl8

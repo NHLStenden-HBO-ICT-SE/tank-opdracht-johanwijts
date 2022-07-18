@@ -15,6 +15,7 @@
     <ClCompile Include="tank.cpp" />
     <ClCompile Include="terrain.cpp" />
     <ClCompile Include="game_object.cpp" />
+    <ClCompile Include="grid.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game.h" />
