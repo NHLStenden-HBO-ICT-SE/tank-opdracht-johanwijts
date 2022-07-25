@@ -6,13 +6,16 @@ namespace Tmpl8
 	Grid::Grid(int width, int height, int cellSize) :
 		m_width(width),
 		m_height(height),
-		m_cellSize(cellSize)
-	{
-		m_numXCells = ceil((float)m_width / cellSize);
-		m_numYCells = ceil((float)m_height / cellSize);
+		m_cellSize(cellSize) {
+		m_numXCells = (int)ceil((float)m_width / m_cellSize);
+		m_numYCells = (int)ceil((float)m_height / m_cellSize);
 
-		//Allocate all the Cells
+		// Allocate all the cells
+		const int TANKS_TO_RESERVE = 20;
 		m_cells.resize(m_numYCells * m_numXCells);
+		for (size_t i = 0; i < m_cells.size(); i++) {
+			m_cells[i].tanks.reserve(TANKS_TO_RESERVE);
+		}
 	}
 
 	Grid::~Grid() {
@@ -46,8 +49,8 @@ namespace Tmpl8
 
 	Cell* Grid::getCell(const vec2& pos)
 	{
-		int cellX = (int)(pos.x / m_cellSize);
-		int cellY = (int)(pos.y / m_cellSize);
+		int cellX = (int)pos.x / m_cellSize;
+		int cellY = (int)pos.y / m_cellSize;
 
 		return getCell(cellX, cellY);
 	}
@@ -55,17 +58,14 @@ namespace Tmpl8
 	void Grid::removeTankFromCell(Tank* tank)
 	{
 		std::vector<Tank*>& tanks = tank->ownerCell->tanks;
-
-		if (tank->cellVectorIndex != tanks.size()) {
-			tanks[tank->cellVectorIndex] = tanks.back();
-		}		
+		// Normal vector swap
+		tanks[tank->cellVectorIndex] = tanks.back();
 		tanks.pop_back();
-
-		if ((size_t)tank->cellVectorIndex < tanks.size())
-		{
+		// Update vector index
+		if ((size_t)tank->cellVectorIndex < tanks.size()) {
 			tanks[tank->cellVectorIndex]->cellVectorIndex = tank->cellVectorIndex;
 		}
-
+		// Set the index of ball to -1
 		tank->cellVectorIndex = -1;
 		tank->ownerCell = nullptr;
 	}

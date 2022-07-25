@@ -159,69 +159,56 @@ void Game::update(float deltaTime)
     }
 
     //Check tank collision and nudge tanks away from each other
-    for (auto& tank : tanks)
+    for (Tank& tank : tanks)
     {
-        if (tank.active == false)
+        if (tank.active)
         {
-            break;
+            for (Tank& other_tank : tanks)
+            {
+                if (&tank == &other_tank || !other_tank.active) continue;
+
+                vec2 dir = tank.get_position() - other_tank.get_position();
+                float dir_squared_len = dir.sqr_length();
+
+                float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
+                col_squared_len *= col_squared_len;
+
+                if (dir_squared_len < col_squared_len)
+                {
+                    tank.push(dir.normalized(), 1.f);
+                }
+            }
         }
-
-        for (auto& other_tank : tanks)
-        {
-            if (other_tank.active == false)
-            {
-                break;
-            }
-
-            if (&tank == &other_tank) continue;
-
-            vec2 dir = tank.get_position() - other_tank.get_position();
-            float dir_squared_len = dir.sqr_length();
-
-            float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
-            col_squared_len *= col_squared_len;
-
-            if (dir_squared_len < col_squared_len)
-            {
-                tank.push(dir.normalized(), 1.f);
-            }
-        } 
     }
 
     //Update tanks
-    for (size_t i = 0; i < tanks.size(); i++)
+    int tankIndex = 0;
+    for (Tank& tank : tanks)
     {
-        if (tanks[i].active == false)
+        if (tank.active)
         {
-            break;
-        }
+            //Move tanks according to speed and nudges (see above) also reload
+            tank.tick(background_terrain);
 
-        //Move tanks according to speed and nudges (see above) also reload
-        tanks[i].tick(background_terrain);
-
-        // Check to see if the Tank moved
-        Cell* newCell = m_grid->getCell(tanks[i].position);
-        if (newCell != tanks[i].ownerCell)
-        {
-            if (tanks[i].cellVectorIndex == -1) {
-                m_grid->addTank(&tanks[i], newCell);
-                return;
+            // Check to see if the ball moved
+            Cell* newCell = m_grid->getCell(tank.position);
+            if (newCell != tank.ownerCell) {
+                m_grid->removeTankFromCell(&tanks[tankIndex]);
+                m_grid->addTank(&tanks[tankIndex], newCell);
             }
 
-            m_grid->removeTankFromCell(&tanks[i]);
-            m_grid->addTank(&tanks[i], newCell);
+            //Shoot at closest target if reloaded
+            if (tank.rocket_reloaded())
+            {
+                Tank& target = find_closest_enemy(tank);
+
+                rockets.push_back(Rocket(tank.position, (target.get_position() - tank.position).normalized() * 3, rocket_radius, tank.allignment, ((tank.allignment == RED) ? &rocket_red : &rocket_blue)));
+
+                tank.reload_rocket();
+            }
         }
 
-        //Shoot at closest target if reloaded
-        if (tanks[i].rocket_reloaded())
-        {
-            Tank& target = find_closest_enemy(tanks[i]);
-
-            // Spawn Rocket
-            rockets.push_back(Rocket(tanks[i].position, (target.get_position() - tanks[i].position).normalized() * 3, rocket_radius, tanks[i].allignment, ((tanks[i].allignment == RED) ? &rocket_red : &rocket_blue)));
-           
-            tanks[i].reload_rocket();
-        }
+        tankIndex++;
     }
 
     //Update smoke plumes
@@ -235,96 +222,74 @@ void Game::update(float deltaTime)
 
     //Find first active tank (this loop is a bit disgusting, fix?)
     int first_active = 0;
-    
-    //We shouldn't need this anymore, the first tank is always active.
-
-    //for (Tank& tank : tanks)
-    //{
-    //    if (tank.active)
-    //    {
-    //        break;
-    //    }
-    //    first_active++;
-    //}
-
+    for (Tank& tank : tanks)
+    {
+        if (tank.active)
+        {
+            break;
+        }
+        first_active++;
+    }
     vec2 point_on_hull = tanks.at(first_active).position;
     //Find left most tank position
     for (Tank& tank : tanks)
     {
-        if (tank.active == false) 
+        if (tank.active)
         {
-            break;
-        }
-        
-        else if (tank.position.x <= point_on_hull.x)
-        {
-            point_on_hull = tank.position;
+            if (tank.position.x <= point_on_hull.x)
+            {
+                point_on_hull = tank.position;
+            }
         }
     }
 
     //Calculate convex hull for 'rocket barrier'
-    for (auto& tank : tanks)
+    for (Tank& tank : tanks)
     {
-        if (tank.active == false)
+        if (tank.active)
         {
-            break;
-        }
+            forcefield_hull.push_back(point_on_hull);
+            vec2 endpoint = tanks.at(first_active).position;
 
-        forcefield_hull.push_back(point_on_hull);
-        vec2 endpoint = tanks.at(first_active).position;
+            for (Tank& tank : tanks)
+            {
+                if (tank.active)
+                {
+                    if ((endpoint == point_on_hull) || left_of_line(point_on_hull, endpoint, tank.position))
+                    {
+                        endpoint = tank.position;
+                    }
+                }
+            }
+            point_on_hull = endpoint;
 
-        for (auto& tank : tanks)
-        {
-            if (tank.active == false)
+            if (endpoint == forcefield_hull.at(0))
             {
                 break;
             }
-                if ((endpoint == point_on_hull) || left_of_line(point_on_hull, endpoint, tank.position))
-                {
-                    endpoint = tank.position;
-                }
-                
         }
-        point_on_hull = endpoint;
-
-        if (endpoint == forcefield_hull.at(0))
-        {
-            break;
-        }
-    }   
+    }
 
     //Update rockets
-    for (size_t i = 0; i < rockets.size(); i++)
+    for (Rocket& rocket : rockets)
     {
-        Rocket& rocket = rockets[i];
         rocket.tick();
-        int tankIndex = 0;
 
         //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
-        for (auto &tank: tanks)
+        for (Tank& tank : tanks)
         {
-            if (tank.active == false) 
-            {
-                break;
-            }
-
-            if ((tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
+            if (tank.active && (tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
             {
                 explosions.push_back(Explosion(&explosion, tank.position));
 
                 if (tank.hit(rocket_hit_value))
                 {
                     smokes.push_back(Smoke(smoke, tank.position - vec2(7, 24)));
-
-                    //JW: Here we make sure that active tanks stay at the left of the Vector
-                    std::rotate(tanks.begin() + tankIndex, tanks.begin() + (tankIndex + 1), tanks.end());
                 }
 
                 rocket.active = false;
                 break;
             }
-
-            tankIndex++;
         }
     }
 
@@ -345,12 +310,7 @@ void Game::update(float deltaTime)
         }
     }
 
-    ////Remove exploded rockets rom Cells
-    //for (size_t i = 0; i < rockets.size(); i++) {
-    //    if (!rockets[i].active) {
-    //        m_grid->removeTankFromCell(&tanks[i]);
-    //    }
-    //}
+
 
     //Remove exploded rockets with remove erase idiom
     rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) { return !rocket.active; }), rockets.end());
@@ -360,28 +320,16 @@ void Game::update(float deltaTime)
     {
         particle_beam.tick(tanks);
 
-        int tankIndex = 0;
-
-        //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
-        for (auto& tank : tanks)
-        {           
-            if (tank.active == false)
-            {
-                break;
-            }
-
-            if (particle_beam.rectangle.intersects_circle(tank.get_position(), tank.get_collision_radius()))
+        //Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
+        for (Tank& tank : tanks)
+        {
+            if (tank.active && particle_beam.rectangle.intersects_circle(tank.get_position(), tank.get_collision_radius()))
             {
                 if (tank.hit(particle_beam.damage))
                 {
                     smokes.push_back(Smoke(smoke, tank.position - vec2(0, 48)));
-
-                    //JW: Here we make sure that active tanks stay at the left of the Vector
-                    std::rotate(tanks.begin() + tankIndex, tanks.begin() + (tankIndex + 1), tanks.end());
                 }
             }
-
-            tankIndex++;
         }
     }
 

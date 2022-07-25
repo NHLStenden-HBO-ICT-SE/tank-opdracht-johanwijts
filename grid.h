@@ -22,9 +22,9 @@ namespace Tmpl8
 		// Gets Cell based on position on the screen
 		Cell* getCell(const vec2& pos);
 		
-		void removeTankFromCell(Tank* tank);
+		void removeTankFromCell(Tank* tank);	
 
-	private:
+
 		std::vector<Cell> m_cells;
 		int m_cellSize;
 		int m_width;

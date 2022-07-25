@@ -128,6 +128,7 @@
     <ClCompile Include="smoke.cpp" />
     <ClCompile Include="surface.cpp" />
     <ClCompile Include="tank.cpp" />
+    <ClCompile Include="tank_controller.cpp" />
     <ClCompile Include="template.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -145,6 +146,7 @@
     <ClInclude Include="smoke.h" />
     <ClInclude Include="surface.h" />
     <ClInclude Include="tank.h" />
+    <ClInclude Include="tank_controller.h" />
     <ClInclude Include="template.h" />
     <ClInclude Include="terrain.h" />
     <ClInclude Include="thread_pool.h" />
