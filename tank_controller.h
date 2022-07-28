@@ -1,10 +1,7 @@
 #pragma once
 
-class tank_controller {
+class Tank_Controller {
 public:
-    /// Updates the tanks
-    void updateTanks(std::vector <Tank>& tanks, Grid* grid, float deltaTime, int maxX, int maxY);
-private:
     // Updates collision
     void updateCollision(Grid* grid);
     /// Checks collision between a ball and a vector of balls, starting at a specific index

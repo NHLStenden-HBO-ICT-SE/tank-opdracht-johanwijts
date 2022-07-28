@@ -1,6 +1,7 @@
 #pragma once
 
 #include "grid.h";
+#include "tank_controller.h"
 
 namespace Tmpl8
 {
@@ -10,7 +11,7 @@ class Rocket;
 class Smoke;
 class Particle_beam;
 
-const int CELL_SIZE = 128;
+const int CELL_SIZE = 12;
 
 class Game
 {
@@ -59,6 +60,8 @@ class Game
     vector<Particle_beam> particle_beams;  
 
     std::unique_ptr<Grid> m_grid;
+
+    Tank_Controller m_tank_controller;
 
     Terrain background_terrain;
     std::vector<vec2> forcefield_hull;

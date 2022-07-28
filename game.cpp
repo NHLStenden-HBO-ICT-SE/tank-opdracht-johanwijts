@@ -14,7 +14,7 @@ constexpr auto health_bar_width = 70;
 constexpr auto max_frames = 2000;
 
 //Global performance timer
-constexpr auto REF_PERFORMANCE = 5056; //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
+constexpr auto REF_PERFORMANCE = 0405; //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
 static timer perf_timer;
 static float duration;
 
@@ -108,26 +108,17 @@ Tank& Game::find_closest_enemy(Tank& current_tank)
     float closest_distance = numeric_limits<float>::infinity();
     int closest_index = 0;
 
-    int tankIndex = 0;
-
-    for (auto& tank : tanks)
+    for (int i = 0; i < tanks.size(); i++)
     {
-        if (tank.active == false)
+        if (tanks.at(i).allignment != current_tank.allignment && tanks.at(i).active)
         {
-            break;
-        }
-
-        if (tanks.at(tankIndex).allignment != current_tank.allignment)
-        {
-            float sqr_dist = fabsf((tanks.at(tankIndex).get_position() - current_tank.get_position()).sqr_length());
+            float sqr_dist = fabsf((tanks.at(i).get_position() - current_tank.get_position()).sqr_length());
             if (sqr_dist < closest_distance)
             {
                 closest_distance = sqr_dist;
-                closest_index = tankIndex;
+                closest_index = i;
             }
         }
-
-        tankIndex++;
     }
 
     return tanks.at(closest_index);
@@ -158,29 +149,6 @@ void Game::update(float deltaTime)
         }
     }
 
-    //Check tank collision and nudge tanks away from each other
-    for (Tank& tank : tanks)
-    {
-        if (tank.active)
-        {
-            for (Tank& other_tank : tanks)
-            {
-                if (&tank == &other_tank || !other_tank.active) continue;
-
-                vec2 dir = tank.get_position() - other_tank.get_position();
-                float dir_squared_len = dir.sqr_length();
-
-                float col_squared_len = (tank.get_collision_radius() + other_tank.get_collision_radius());
-                col_squared_len *= col_squared_len;
-
-                if (dir_squared_len < col_squared_len)
-                {
-                    tank.push(dir.normalized(), 1.f);
-                }
-            }
-        }
-    }
-
     //Update tanks
     int tankIndex = 0;
     for (Tank& tank : tanks)
@@ -188,7 +156,7 @@ void Game::update(float deltaTime)
         if (tank.active)
         {
             //Move tanks according to speed and nudges (see above) also reload
-            tank.tick(background_terrain);
+            tank.tick(background_terrain);       
 
             // Check to see if the ball moved
             Cell* newCell = m_grid->getCell(tank.position);
@@ -210,6 +178,9 @@ void Game::update(float deltaTime)
 
         tankIndex++;
     }
+
+    //Update all collisions using spatial partitioning
+    m_tank_controller.updateCollision(m_grid.get());
 
     //Update smoke plumes
     for (Smoke& smoke : smokes)
